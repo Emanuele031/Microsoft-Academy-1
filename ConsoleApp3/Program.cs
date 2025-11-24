@@ -17,6 +17,32 @@ class Program
     static Persona[] anagrafica = new Persona[2];
     static int countPersone = 0;
     static int progressivo = 1;
+    static bool EmailValida(string email)
+    {
+        return email.Contains("@") && email.Contains(".");
+    }
+
+    static bool TelefonoValido(string telefono)
+    {
+        foreach (char c in telefono)
+            if (!char.IsDigit(c)) return false;
+
+        return telefono.Length >= 7 && telefono.Length <= 15;
+    }
+
+    static bool EmailUnica(string email)
+    {
+        for (int i = 0; i < countPersone; i++)
+            if (anagrafica[i].Email == email) return false;
+        return true;
+    }
+
+    static bool TelefonoUnico(string tel)
+    {
+        for (int i = 0; i < countPersone; i++)
+            if (anagrafica[i].Telefono == tel) return false;
+        return true;
+    }
 
     static void Main(string[] args)
     {
@@ -185,6 +211,8 @@ class Program
             Console.WriteLine("3 - Eliminazione");
             Console.WriteLine("4 - Stampa");
             Console.WriteLine("5 - Ricerca");
+            Console.WriteLine("6 - Ordinamento");
+            Console.WriteLine("7 - Statistiche");
             Console.WriteLine("0 - Torna al menu principale");
             Console.Write("Scelta: ");
             string scelta = Console.ReadLine();
@@ -195,7 +223,9 @@ class Program
                 case "2": AggiornamentoPersona(); break;
                 case "3": EliminazionePersona(); break;
                 case "4": StampaPersone(); break;
-                case "5": RicercaPersona(); break;
+                case "5": RicercaAvanzataPersona(); break;
+                case "6": OrdinamentoAnagrafica(); break;
+                case "7": StatisticheAnagrafica(); break;
                 case "0": esecuzione = false; break;
                 default: Console.WriteLine("Scelta non valida!"); break;
             }
@@ -223,10 +253,28 @@ class Program
         p.Cognome = Console.ReadLine();
         Console.Write("Età: ");
         p.Eta = int.Parse(Console.ReadLine());
-        Console.Write("Telefono: ");
-        p.Telefono = Console.ReadLine();
-        Console.Write("Email: ");
-        p.Email = Console.ReadLine();
+
+        string tel;
+        do
+        {
+            Console.Write("Telefono (7-15 cifre, unico): ");
+            tel = Console.ReadLine();
+
+        } while (!TelefonoValido(tel) || !TelefonoUnico(tel));
+
+        p.Telefono = tel;
+
+        
+        string email;
+        do
+        {
+            Console.Write("Email (valida e unica): ");
+            email = Console.ReadLine();
+
+        } while (!EmailValida(email) || !EmailUnica(email));
+
+        p.Email = email;
+
 
         anagrafica[countPersone] = p;
         countPersone++;
@@ -238,7 +286,15 @@ class Program
     {
         StampaPersone();
         Console.Write("Numero persona da aggiornare: ");
-        int index = int.Parse(Console.ReadLine()) - 1;
+
+        if (!int.TryParse(Console.ReadLine(), out int numero) || numero < 1 || numero > countPersone)
+        {
+            Console.WriteLine("⚠️ Inserisci un numero valido!");
+            return;
+        }
+
+        int index = numero - 1;
+
         if (index < 0 || index >= countPersone) { Console.WriteLine("Numero non valido!"); return; }
 
         Persona p = anagrafica[index];
@@ -250,9 +306,25 @@ class Program
         Console.Write("Nuova Età (vuoto per mantenere): ");
         string etaStr = Console.ReadLine(); if (!string.IsNullOrEmpty(etaStr)) p.Eta = int.Parse(etaStr);
         Console.Write("Nuovo Telefono (vuoto per mantenere): ");
-        string tel = Console.ReadLine(); if (!string.IsNullOrEmpty(tel)) p.Telefono = tel;
+        string tel = Console.ReadLine();
+        if (!string.IsNullOrEmpty(tel))
+        {
+            if (TelefonoValido(tel) && TelefonoUnico(tel))
+                p.Telefono = tel;
+            else
+                Console.WriteLine("Telefono non valido o già esistente. Valore non aggiornato.");
+        }
+
         Console.Write("Nuova Email (vuoto per mantenere): ");
-        string email = Console.ReadLine(); if (!string.IsNullOrEmpty(email)) p.Email = email;
+        string email = Console.ReadLine();
+        if (!string.IsNullOrEmpty(email))
+        {
+            if (EmailValida(email) && EmailUnica(email))
+                p.Email = email;
+            else
+                Console.WriteLine("Email non valida o già esistente. Valore non aggiornato.");
+        }
+
 
         anagrafica[index] = p;
         Console.WriteLine("Aggiornamento completato!");
@@ -285,20 +357,28 @@ class Program
         }
     }
 
-    static void RicercaPersona()
+    static void RicercaAvanzataPersona()
     {
-        Console.WriteLine("Cerca per: 1-Nome, 2-Cognome, 3-CodID");
-        string scelta = Console.ReadLine();
-        Console.Write("Valore da cercare: ");
-        string valore = Console.ReadLine();
-        bool trovato = false;
+        Console.WriteLine("Ricerca avanzata:");
+        Console.Write("Nome (vuoto per ignorare): ");
+        string nome = Console.ReadLine();
+        Console.Write("Cognome (vuoto per ignorare): ");
+        string cognome = Console.ReadLine();
+        Console.Write("Età maggiore o uguale a (vuoto per ignorare): ");
+        string etaMinStr = Console.ReadLine();
+        Console.Write("Età minore o uguale a (vuoto per ignorare): ");
+        string etaMaxStr = Console.ReadLine();
 
+        int etaMin = string.IsNullOrEmpty(etaMinStr) ? int.MinValue : int.Parse(etaMinStr);
+        int etaMax = string.IsNullOrEmpty(etaMaxStr) ? int.MaxValue : int.Parse(etaMaxStr);
+
+        bool trovato = false;
         for (int i = 0; i < countPersone; i++)
         {
             Persona p = anagrafica[i];
-            if ((scelta == "1" && p.Nome.Equals(valore, StringComparison.OrdinalIgnoreCase)) ||
-                (scelta == "2" && p.Cognome.Equals(valore, StringComparison.OrdinalIgnoreCase)) ||
-                (scelta == "3" && p.CodID == valore))
+            if ((string.IsNullOrEmpty(nome) || p.Nome.IndexOf(nome, StringComparison.OrdinalIgnoreCase) >= 0) &&
+                (string.IsNullOrEmpty(cognome) || p.Cognome.IndexOf(cognome, StringComparison.OrdinalIgnoreCase) >= 0) &&
+                p.Eta >= etaMin && p.Eta <= etaMax)
             {
                 Console.WriteLine($"{i + 1}) CodID: {p.CodID}, Nome: {p.Nome}, Cognome: {p.Cognome}, Età: {p.Eta}, Tel: {p.Telefono}, Email: {p.Email}");
                 trovato = true;
@@ -306,4 +386,86 @@ class Program
         }
         if (!trovato) Console.WriteLine("Nessun risultato trovato.");
     }
+    static void OrdinamentoAnagrafica()
+    {
+        if (countPersone == 0) { Console.WriteLine("Anagrafica vuota."); return; }
+
+        Console.WriteLine("Ordina per: 1-Nome, 2-Cognome, 3-Età, 4-Email");
+        string scelta = Console.ReadLine();
+
+        for (int i = 0; i < countPersone - 1; i++)
+        {
+            for (int j = 0; j < countPersone - i - 1; j++)
+            {
+                bool scambia = false;
+
+                switch (scelta)
+                {
+                    case "1": 
+                        if (string.Compare(anagrafica[j].Nome, anagrafica[j + 1].Nome, true) > 0) scambia = true;
+                        break;
+                    case "2": 
+                        if (string.Compare(anagrafica[j].Cognome, anagrafica[j + 1].Cognome, true) > 0) scambia = true;
+                        break;
+                    case "3": 
+                        if (anagrafica[j].Eta > anagrafica[j + 1].Eta) scambia = true;
+                        break;
+                    case "4": 
+                        if (string.Compare(anagrafica[j].Email, anagrafica[j + 1].Email, true) > 0) scambia = true;
+                        break;
+                    default:
+                        Console.WriteLine("Scelta non valida!"); return;
+                }
+
+                if (scambia)
+                {
+                    Persona temp = anagrafica[j];
+                    anagrafica[j] = anagrafica[j + 1];
+                    anagrafica[j + 1] = temp;
+                }
+            }
+        }
+
+        Console.WriteLine("Ordinamento completato!");
+        StampaPersone();
+    }
+
+    static void StatisticheAnagrafica()
+    {
+        if (countPersone == 0) { Console.WriteLine("Anagrafica vuota."); return; }
+
+        int sommaEta = 0;
+        int minEta = int.MaxValue;
+        int maxEta = int.MinValue;
+        int[] iniziali = new int[26];
+
+        for (int i = 0; i < countPersone; i++)
+        {
+            Persona p = anagrafica[i];
+            sommaEta += p.Eta;
+            if (p.Eta < minEta) minEta = p.Eta;
+            if (p.Eta > maxEta) maxEta = p.Eta;
+
+            if (!string.IsNullOrEmpty(p.Nome))
+            {
+                char iniziale = char.ToUpper(p.Nome[0]);
+                if (iniziale >= 'A' && iniziale <= 'Z')
+                    iniziali[iniziale - 'A']++;
+            }
+        }
+
+        Console.WriteLine($"Numero totale persone: {countPersone}");
+        Console.WriteLine($"Età media: {(double)sommaEta / countPersone:F2}");
+        Console.WriteLine($"Età minima: {minEta}, Età massima: {maxEta}");
+
+        Console.WriteLine("Conteggio per iniziale del nome:");
+        for (int i = 0; i < 26; i++)
+        {
+            if (iniziali[i] > 0)
+                Console.WriteLine($"{(char)('A' + i)}: {iniziali[i]}");
+        }
+    }
+
+
 }
+
